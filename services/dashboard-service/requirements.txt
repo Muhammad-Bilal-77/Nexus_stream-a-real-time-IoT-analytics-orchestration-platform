@@ -1,0 +1,27 @@
+fastapi==0.111.0
+uvicorn==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# PostgreSQL driver (skipped for local Windows test compatibility)
+# asyncpg==0.29.0
+
+# Redis async client
+redis==5.0.4
+
+# InfluxDB client (sync client, used in thread executor)
+influxdb-client==1.43.0
+# Required for async features of influxdb-client (skipped for local Windows)
+# aiohttp==3.9.5
+
+# JWT validation (Auth service uses jsonwebtoken in Node, meaning HS256 by default in our stub)
+PyJWT==2.8.0
+
+# Logging
+loguru==0.7.2
+
+# Testing & HTTP/WS utils
+pytest==8.2.0
+pytest-asyncio==0.23.6
+httpx==0.27.0
+websockets==12.0

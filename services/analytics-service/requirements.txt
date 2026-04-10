@@ -1,0 +1,28 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# Redis async client (redis.asyncio is built into redis>=4.2)
+redis==5.0.4
+
+# InfluxDB client (sync client, used via asyncio executor in batch writer)
+influxdb-client==1.43.0
+# aiohttp is required by influxdb-client for its async write_api
+aiohttp==3.9.5
+
+# Loguru — structured, zero-config logging
+loguru==0.7.2
+
+# HTTP client for /ready health probes and integration tests
+httpx==0.27.0
+
+# WebSocket client for integration tests + ws_client.py script
+websockets==12.0
+
+# Optional: aio-pika for RabbitMQ alternative broker
+aio-pika==9.4.1
+
+# Testing
+pytest==8.2.0
+pytest-asyncio==0.23.6

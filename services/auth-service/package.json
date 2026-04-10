@@ -1,0 +1,30 @@
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "description": "NexusStream JWT + OAuth authentication service (stub)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.3.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.4",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.20.0",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.1",
+    "supertest": "^7.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

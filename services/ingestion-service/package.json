@@ -1,0 +1,29 @@
+{
+  "name": "ingestion-service",
+  "version": "1.0.0",
+  "description": "NexusStream high-frequency IoT data ingestion service",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint src/**/*.js",
+    "test": "jest --forceExit"
+  },
+  "dependencies": {
+    "ajv": "^8.13.0",
+    "ajv-formats": "^3.0.1",
+    "express": "^4.19.2",
+    "ioredis": "^5.3.2",
+    "uuid": "^9.0.1",
+    "winston": "^3.13.0",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

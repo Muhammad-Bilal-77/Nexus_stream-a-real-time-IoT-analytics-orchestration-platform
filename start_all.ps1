@@ -1,0 +1,6 @@
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd redis_bin; .\redis-server.exe redis.windows.conf"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\ingestion-service; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\auth-service; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\analytics-service; if (-not (Test-Path .venv)) { python -m venv .venv }; .\.venv\Scripts\activate.ps1; pip install -r requirements.txt; uvicorn main:app --reload --port 8001"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\dashboard-service; if (-not (Test-Path .venv)) { python -m venv .venv }; .\.venv\Scripts\activate.ps1; pip install -r requirements.txt; uvicorn main:app --reload --port 8002"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev"

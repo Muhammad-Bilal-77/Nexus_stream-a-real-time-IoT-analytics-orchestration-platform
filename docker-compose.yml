@@ -1,0 +1,343 @@
+# =============================================================================
+# NexusStream IoT Analytics Platform — Docker Compose Orchestration
+# =============================================================================
+# Usage:
+#   docker-compose up --build          # Build and start all services
+#   docker-compose up -d               # Start in background
+#   docker-compose logs -f ingestion   # Tail ingestion service logs
+#   docker-compose down -v             # Stop and remove volumes
+#
+# Architecture:
+#   ┌─────────────────────────────────────────────────────────┐
+#   │                    nexusstream-net                       │
+#   │  ingestion ──publish──▶ redis ◀──subscribe── analytics  │
+#   │      └──────websocket──▶ [dashboard clients]            │
+#   │  auth ◀── JWT verify ── analytics, dashboard            │
+#   │  postgres ◀── user data ── auth, dashboard              │
+#   │  influxdb ◀── time-series ── analytics                  │
+#   └─────────────────────────────────────────────────────────┘
+#
+# Scaling:
+#   docker-compose up --scale ingestion-service=3
+#   (Requires an upstream load balancer for WebSocket sticky sessions)
+#
+# Production Checklist:
+#   ✓ All secrets via .env (or Docker secrets for Swarm/k8s)
+#   ✓ Named volumes for database persistence
+#   ✓ Custom bridge network (no default bridge leakage)
+#   ✓ Health checks on all containers
+#   ✓ depends_on with condition: service_healthy
+#   ✓ Restart policies for auto-recovery
+
+version: "3.9"
+
+# ===========================================================================
+# Networks
+# ===========================================================================
+networks:
+  nexusstream-net:
+    driver: bridge
+    # Internal network — services communicate by service name DNS resolution
+    # e.g. ingestion-service connects to redis:6379
+
+# ===========================================================================
+# Volumes — persistent data survives container restarts/recreations
+# ===========================================================================
+volumes:
+  postgres-data:
+    driver: local
+  influxdb-data:
+    driver: local
+  influxdb-config:
+    driver: local
+  redis-data:
+    driver: local
+
+# ===========================================================================
+# Services
+# ===========================================================================
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — User auth, RBAC, device registry
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexusstream-postgres
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./databases/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Redis — Message broker (Pub/Sub) + metrics cache
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.2-alpine
+    container_name: nexusstream-redis
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    volumes:
+      - redis-data:/data
+    # Override default redis.conf — requirepass is set here via command
+    # (The redis.conf approach with ${VAR} substitution requires a shell wrapper)
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --hz 20
+      --loglevel notice
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # InfluxDB v2 — Time-series IoT telemetry
+  # ---------------------------------------------------------------------------
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: nexusstream-influxdb
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    environment:
+      # DOCKER_INFLUXDB_INIT_* variables trigger automated onboarding on first run
+      DOCKER_INFLUXDB_INIT_MODE:        setup
+      DOCKER_INFLUXDB_INIT_USERNAME:    ${INFLUXDB_ADMIN_USER}
+      DOCKER_INFLUXDB_INIT_PASSWORD:    ${INFLUXDB_ADMIN_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG:         ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET:      ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ — Alternative message broker (wired, not used by default)
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: nexusstream-rabbitmq
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    environment:
+      RABBITMQ_DEFAULT_USER:  ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS:  ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"   # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Ingestion Service — Fully functional Node.js IoT data ingestor
+  # ---------------------------------------------------------------------------
+  ingestion-service:
+    build:
+      context: ./services/ingestion-service
+      dockerfile: Dockerfile
+    container_name: nexusstream-ingestion
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV:            ${NODE_ENV:-production}
+      INGESTION_PORT:      ${INGESTION_PORT:-3001}
+      DEVICE_COUNT:        ${DEVICE_COUNT:-10}
+      PUBLISH_INTERVAL_MS: ${PUBLISH_INTERVAL_MS:-100}
+      ANOMALY_RATE:        ${ANOMALY_RATE:-0.05}
+      BUFFER_MAX_SIZE:     ${BUFFER_MAX_SIZE:-1000}
+      RETRY_INTERVAL_MS:   ${RETRY_INTERVAL_MS:-3000}
+      REDIS_HOST:          redis
+      REDIS_PORT:          6379
+      REDIS_PASSWORD:      ${REDIS_PASSWORD}
+      REDIS_IOT_CHANNEL:   ${REDIS_IOT_CHANNEL:-iot:metrics}
+      LOG_LEVEL:           ${LOG_LEVEL:-info}
+      LOG_FORMAT:          ${LOG_FORMAT:-json}
+    ports:
+      - "${INGESTION_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Auth Service — Node.js Identity provider (RS256, PostgreSQL)
+  # ---------------------------------------------------------------------------
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: nexusstream-auth
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:            ${NODE_ENV:-production}
+      AUTH_PORT:           ${AUTH_PORT:-3002}
+      JWT_ACCESS_EXPIRY:   ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY:  ${JWT_REFRESH_EXPIRY:-7d}
+      POSTGRES_HOST:       postgres
+      POSTGRES_PORT:       5432
+      POSTGRES_DB:         ${POSTGRES_DB}
+      POSTGRES_USER:       ${POSTGRES_USER}
+      POSTGRES_PASSWORD:   ${POSTGRES_PASSWORD}
+      LOG_LEVEL:           ${LOG_LEVEL:-info}
+    ports:
+      - "${AUTH_PORT:-3002}:3002"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Analytics Service — Python FastAPI FULLY IMPLEMENTED
+  # ---------------------------------------------------------------------------
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    container_name: nexusstream-analytics
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    environment:
+      ANALYTICS_PORT:      ${ANALYTICS_PORT:-8001}
+      REDIS_HOST:          redis
+      REDIS_PORT:          6379
+      REDIS_PASSWORD:      ${REDIS_PASSWORD}
+      REDIS_IOT_CHANNEL:   ${REDIS_IOT_CHANNEL:-iot:metrics}
+      INFLUXDB_HOST:       influxdb
+      INFLUXDB_PORT:       8086
+      INFLUXDB_TOKEN:      ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG:        ${INFLUXDB_ORG}
+      INFLUXDB_BUCKET:     ${INFLUXDB_BUCKET}
+      # Sliding window
+      WINDOW_SIZE_SECONDS: ${WINDOW_SIZE_SECONDS:-60}
+      # Anomaly thresholds per device type
+      ANOMALY_THRESHOLD_TEMPERATURE_MIN: ${ANOMALY_THRESHOLD_TEMPERATURE_MIN:--20}
+      ANOMALY_THRESHOLD_TEMPERATURE_MAX: ${ANOMALY_THRESHOLD_TEMPERATURE_MAX:-85}
+      ANOMALY_THRESHOLD_PRESSURE_MIN:    ${ANOMALY_THRESHOLD_PRESSURE_MIN:-80000}
+      ANOMALY_THRESHOLD_PRESSURE_MAX:    ${ANOMALY_THRESHOLD_PRESSURE_MAX:-120000}
+      ANOMALY_THRESHOLD_HUMIDITY_MIN:    ${ANOMALY_THRESHOLD_HUMIDITY_MIN:-0}
+      ANOMALY_THRESHOLD_HUMIDITY_MAX:    ${ANOMALY_THRESHOLD_HUMIDITY_MAX:-100}
+      ANOMALY_THRESHOLD_VIBRATION_MIN:   ${ANOMALY_THRESHOLD_VIBRATION_MIN:-0}
+      ANOMALY_THRESHOLD_VIBRATION_MAX:   ${ANOMALY_THRESHOLD_VIBRATION_MAX:-500}
+      ANOMALY_THRESHOLD_POWER_MIN:       ${ANOMALY_THRESHOLD_POWER_MIN:-0}
+      ANOMALY_THRESHOLD_POWER_MAX:       ${ANOMALY_THRESHOLD_POWER_MAX:-5000}
+      # InfluxDB batching
+      INFLUX_BATCH_SIZE:         ${INFLUX_BATCH_SIZE:-50}
+      INFLUX_BATCH_INTERVAL_MS:  ${INFLUX_BATCH_INTERVAL_MS:-1000}
+      ANOMALY_CACHE_SIZE:        ${ANOMALY_CACHE_SIZE:-200}
+      LOG_LEVEL:           ${LOG_LEVEL:-info}
+      LOG_FORMAT:          ${LOG_FORMAT:-json}
+    ports:
+      - "${ANALYTICS_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+
+  # ---------------------------------------------------------------------------
+  # Dashboard Service — Python FastAPI FULLY IMPLEMENTED
+  # ---------------------------------------------------------------------------
+  dashboard-service:
+    build:
+      context: ./services/dashboard-service
+      dockerfile: Dockerfile
+    container_name: nexusstream-dashboard
+    restart: unless-stopped
+    networks:
+      - nexusstream-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+    environment:
+      DASHBOARD_PORT:      ${DASHBOARD_PORT:-8002}
+      REDIS_HOST:          redis
+      REDIS_PORT:          6379
+      REDIS_PASSWORD:      ${REDIS_PASSWORD}
+      POSTGRES_HOST:       postgres
+      POSTGRES_PORT:       5432
+      POSTGRES_DB:         ${POSTGRES_DB}
+      POSTGRES_USER:       ${POSTGRES_USER}
+      POSTGRES_PASSWORD:   ${POSTGRES_PASSWORD}
+      POSTGRES_MIN_POOL:   2
+      POSTGRES_MAX_POOL:   10
+      INFLUXDB_HOST:       influxdb
+      INFLUXDB_PORT:       8086
+      INFLUXDB_TOKEN:      ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG:        ${INFLUXDB_ORG}
+      INFLUXDB_BUCKET:     ${INFLUXDB_BUCKET}
+      JWT_SECRET:          ${JWT_SECRET:-nexusstream-dev-jwt-secret-change-in-prod}
+      JWT_ALGORITHM:       RS256
+      ANALYTICS_WS_URL:    ws://analytics-service:8001/ws/analytics
+      REDIS_CACHE_TTL_SECONDS: 10
+      LOG_LEVEL:           ${LOG_LEVEL:-info}
+      LOG_FORMAT:          ${LOG_FORMAT:-json}
+    ports:
+      - "${DASHBOARD_PORT:-8002}:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

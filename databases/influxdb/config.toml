@@ -1,0 +1,15 @@
+# InfluxDB v2 initial configuration
+# This file is mounted into the container for automated setup.
+# Variables are resolved from .env via docker-compose.
+
+# The influx CLI will pick these up automatically during first-boot setup.
+# Reference: https://docs.influxdata.com/influxdb/v2/reference/config-options/
+
+reporting-disabled = true   # Disable usage telemetry in production
+
+[http]
+  bind-address = ":8086"
+
+[storage]
+  # Retention policies are configured programmatically via Flux tasks
+  # Default: keep all data (adjust per compliance requirements)
