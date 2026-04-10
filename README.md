@@ -1,12 +1,15 @@
 # 🌌 NexusStream: Advanced IoT Analytics & Orchestration Platform
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Status: Fully Implemented](https://img.shields.io/badge/Status-Fully--Implemented-success.svg)
-![Frontend: React 19](https://img.shields.io/badge/Frontend-React%2019-61DAFB.svg?logo=react)
+![Status: Under Development](https://img.shields.io/badge/Status-Under--Development-orange.svg)
+![Frontend: Building](https://img.shields.io/badge/Frontend-In--Progress-yellow.svg)
 ![Backend: Node.js + Python](https://img.shields.io/badge/Backend-Node.js%20%7C%20Python-3776AB.svg?logo=python)
 ![Infrastructure: Docker](https://img.shields.io/badge/Infrastructure-Docker-2496ED.svg?logo=docker)
 
-**NexusStream** is a high-performance, industrial-grade IoT analytics platform designed to handle massive telemetry streams with real-time anomaly detection, secure identity management, and a premium "VisionTrack" dashboard interface.
+**NexusStream** is a high-performance, industrial-grade IoT analytics platform. 
+
+> [!NOTE]
+> **Active Development**: The backend microservices architecture is fully implemented and operational. We are currently focusing on the high-fidelity **Frontend VisionTrack Dashboard** to provide world-class real-time visualizations.
 
 ---
 
@@ -82,6 +85,7 @@ NexusStream prioritizes security with a decentralized identity model.
 - **The Logic**: IoT packets flow from simulators into the `ingestion-service`. Each packet is validated against a strict JSON schema. Once validated, it is broadcasted over WebSockets for immediate visualization and published to Redis for downstream processing.
 - **Resilience**: A ring-buffer mechanism ensures no data is lost during momentary Redis disconnections.
 
+
 ### 3. **Intelligent Analytics Engine**
 - **The Approach**: The `analytics-service` maintains a sliding temporal window of telemetry. It identifies "Statistical Outliers" by comparing incoming values against the historic mean and standard deviation of that specific device.
 - **Database Hybridization**: Uses **PostgreSQL** for relational metadata and **InfluxDB** for high-frequency time-series data, ensuring the best tool is used for each task.
@@ -111,42 +115,73 @@ nexusstream/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-1. **Clone the Project**:
-   ```bash
-   git clone <repository-url>
-   cd nexusstream
-   ```
+### Option 1: Local One-Click Startup (Windows)
+If you are on Windows, you can start the entire stack (including Redis and the Frontend) with a single script:
+```powershell
+./start_all.ps1
+```
+This script will spawn multiple windows for:
+- **Redis Server** (Local binary)
+- **Ingestion Service** (Node.js)
+- **Auth Service** (Node.js)
+- **Analytics Service** (Python)
+- **Dashboard Service** (Python)
+- **Frontend Dashboard** (Vite/React)
 
-2. **Environment Setup**:
-   Map your secrets in `.env` (use `.env.example` as a reference).
-
-3. **Power Up**:
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Web Endpoints**:
-   - Dashboard: [http://localhost:5173](http://localhost:5173)
-   - API Docs: [http://localhost:8001/docs](http://localhost:8001/docs)
+### Option 2: Docker Orchestration
+If you have Docker installed, use the orchestration file:
+```bash
+docker-compose up --build
+```
 
 ---
 
-## 📈 Technical Analysis: Pros & Cons
+## ⚙️ Manual Service Startup
 
-### **Pros**
-- ✅ **Decoupled Scaling**: Ingest spikes don't lag the UI.
-- ✅ **Polyglot Advantage**: High-performance I/O in Node, Data Science in Python.
-- ✅ **Infrastructure-as-Code**: Entire stack is containerized for zero-friction boarding.
-- ✅ **Enterprise Security**: Asymmetric JWT signatures and RBAC.
+### 1. Prerequisite: Databases
+Ensure **PostgreSQL** is running. If you need to initialize the schema:
+```powershell
+python setup_postgres.py
+```
 
-### **Cons**
-- ⚠️ **Operational Overhead**: Requires managing four distinct service environments.
-- ⚠️ **Network Latency**: Inter-service communication adds millisecond overhead compared to monoliths.
-- ⚠️ **Consistency**: Telemetry data is "eventually consistent" in historical reports.
+### 2. Start Services Individually
+If you want to run services manually for debugging:
 
+**Backend (Node.js):**
+```bash
+cd services/auth-service && npm run dev
+cd services/ingestion-service && npm run dev
+```
+
+**Analytics (Python):**
+```bash
+cd services/analytics-service
+# On Windows
+.\.venv\Scripts\activate
+uvicorn main:app --reload --port 8001
+```
+
+**Frontend:**
+```bash
+cd frontend && npm run dev
+```
 ---
 
 ## 🎨 Design Philosophy
 NexusStream was built to prove that **Modern Infrastructure deserves Modern Design.** We use vibrancy and depth to turn abstract data into a premium user experience.
+
+---
+
+## 🗺️ Roadmap
+NexusStream is evolving. Our current focus is on enhancing the user experience and deep-data insights:
+- [ ] **Advanced Frontend**: Finalizing the "VisionTrack" dashboard with 3D topology views.
+- [ ] **Predictive Maintenance**: Integrating ML models to predict device failure before it happens.
+- [ ] **Mobile App**: Developing a cross-platform mobile app for on-the-go monitoring.
+- [ ] **Global Scaling**: Testing high-availability clusters with Kubernetes (k8s).
+
+---
+
+> [!TIP]
+> **Performance Tip**: For production deployments, ensure `NODE_ENV` and `PYTHON_ENV` are set to `production` to enable optimized building and logging.
