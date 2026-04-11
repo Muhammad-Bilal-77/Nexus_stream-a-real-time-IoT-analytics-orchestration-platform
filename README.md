@@ -7,6 +7,9 @@
 ![Infrastructure: Docker](https://img.shields.io/badge/Infrastructure-Docker-2496ED.svg?logo=docker)
 
 **NexusStream** is a high-performance, industrial-grade IoT analytics platform. 
+<img width="1919" height="967" alt="image" src="https://github.com/user-attachments/assets/f500f184-4647-4339-a0e2-ae6ede8e614d" />
+<img width="1919" height="957" alt="image" src="https://github.com/user-attachments/assets/99e2d7a5-b21c-4bcd-a63a-9b2c01a5e23e" />
+
 
 > [!IMPORTANT]
 > **Production Ready / Stable**: The NexusStream platform is fully operational, featuring a high-fidelity **VisionTrack Command Hub** and a robust microservices backend. The entire stack is orchestrated via Docker, providing a seamless "Zero-Configuration" environment for real-time IoT telemetry and high-security administrative control.
@@ -171,6 +174,9 @@ cd frontend && npm run dev
 
 ## 🎨 Design Philosophy
 NexusStream was built to prove that **Modern Infrastructure deserves Modern Design.** We use vibrancy and depth to turn abstract data into a premium user experience.
+<img width="1919" height="970" alt="image" src="https://github.com/user-attachments/assets/fe21752f-3a57-40de-9794-7dd9349a33b6" />
+<img width="1919" height="968" alt="image" src="https://github.com/user-attachments/assets/94af49d4-2ccd-4589-9deb-23f73b07f6ee" />
+<img width="1919" height="969" alt="image" src="https://github.com/user-attachments/assets/352fc646-2102-4d06-8789-2affae10ab4e" />
 
 ---
 
@@ -183,6 +189,7 @@ NexusStream is evolving. Our current focus is on enhancing the user experience a
 - [ ] **Global Scaling**: Multi-region Kubernetes (k8s) cluster deployment.
 
 ---
+<img width="1918" height="956" alt="image" src="https://github.com/user-attachments/assets/e73ddab6-66f7-4760-8bd0-0c1bf121c3fb" />
 
 > [!TIP]
 > **Performance Tip**: For production deployments, ensure `NODE_ENV` and `PYTHON_ENV` are set to `production` to enable optimized building and logging.
