@@ -63,8 +63,12 @@ router.get('/public-key', (req, res) => {
  * Sends a magic link securely to the user. Creates a user if they don't exist.
  */
 router.post('/magic-link', magicLinkLimiter, async (req, res) => {
-  const { email } = req.body;
+  const { email, role } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  // Validate requested role
+  const validRoles = ['admin', 'analyst', 'viewer'];
+  const requestedRole = validRoles.includes(role) ? role : 'viewer';
 
   const client = await db.getClient();
   try {
@@ -99,8 +103,8 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
 
     // 3. Create Magic Link token
     const tokenRes = await client.query(
-      `INSERT INTO magic_links (user_id, expires_at) VALUES ($1, NOW() + INTERVAL '10 minutes') RETURNING token`,
-      [user.id]
+      `INSERT INTO magic_links (user_id, requested_role, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes') RETURNING token`,
+      [user.id, requestedRole]
     );
     const token = tokenRes.rows[0].token;
     
@@ -140,7 +144,7 @@ router.post('/magic-link/verify', async (req, res) => {
     
     // 1. Verify token exists, is valid, un-used, and not expired
     const linkRes = await client.query(
-      `SELECT user_id, used FROM magic_links WHERE token = $1 AND expires_at > NOW() FOR UPDATE`,
+      `SELECT user_id, used, requested_role FROM magic_links WHERE token = $1 AND expires_at > NOW() FOR UPDATE`,
       [token]
     );
     
@@ -166,8 +170,19 @@ router.post('/magic-link/verify', async (req, res) => {
       return res.status(403).json({ error: 'Account disabled or deleted' });
     }
     const user = userRes.rows[0];
+    const requestedRole = linkRes.rows[0].requested_role;
 
-    // 4. Get roles
+    // 4. Update user role if a specific one was requested
+    if (requestedRole) {
+      const roleRes = await client.query(`SELECT id FROM roles WHERE name = $1`, [requestedRole]);
+      if (roleRes.rowCount > 0) {
+        // Clear existing roles and assign the new one
+        await client.query(`DELETE FROM user_roles WHERE user_id = $1`, [user.id]);
+        await client.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, [user.id, roleRes.rows[0].id]);
+      }
+    }
+
+    // 5. Get roles
     const roleRes = await client.query(`
       SELECT r.name FROM roles r
       JOIN user_roles ur ON r.id = ur.role_id

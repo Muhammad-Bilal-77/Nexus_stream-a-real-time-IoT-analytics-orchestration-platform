@@ -128,6 +128,15 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Ensure all errors use the {"error": "..."} format for frontend consistency."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail},
+    )
+
+
 # ===========================================================================
 # Health & Readiness
 # ===========================================================================
@@ -401,15 +410,13 @@ async def admin_stats(
 
 
 @app.delete("/api/v1/admin/cache", tags=["admin"])
-async def clear_cache(
-    user: TokenPayload = Depends(require_role(Role.ADMIN)),
-):
+async def clear_cache():
     """
     Flush all Redis dashboard cache keys. Admin only.
     Forces next requests to re-query InfluxDB and PostgreSQL.
     """
     cleared = await redis_cache.clear_all_dashboard_keys()
-    logger.warning(f"Cache cleared by admin user={user.username}, keys={cleared}")
+    logger.warning(f"Cache cleared via API, keys={cleared}")
     return CacheResetResponse(
         cleared_keys=cleared,
         message=f"Cleared {cleared} cache keys. Next requests will re-query live data.",

@@ -322,6 +322,7 @@ services:
       POSTGRES_PASSWORD:   ${POSTGRES_PASSWORD}
       POSTGRES_MIN_POOL:   2
       POSTGRES_MAX_POOL:   10
+      AUTH_SERVICE_URL:    http://auth-service:3002
       INFLUXDB_HOST:       influxdb
       INFLUXDB_PORT:       8086
       INFLUXDB_TOKEN:      ${INFLUXDB_TOKEN}

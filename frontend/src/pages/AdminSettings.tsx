@@ -17,7 +17,7 @@ export const AdminPanel: React.FC = () => {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await apiClient.delete('/admin/cache');
+      const res = await apiClient.delete('admin/cache');
       setMsg({ text: res.data.message || 'Cache reset successfully.', type: 'success' });
     } catch (err: any) {
       setMsg({ text: err.response?.data?.error || 'Failed to clear cache.', type: 'error' });

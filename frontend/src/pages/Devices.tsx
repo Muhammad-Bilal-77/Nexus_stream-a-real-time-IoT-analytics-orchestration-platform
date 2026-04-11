@@ -22,7 +22,7 @@ export const Devices: React.FC = () => {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const res = await apiClient.get('/devices?page=1&size=50');
+        const res = await apiClient.get('devices?page=1&size=50');
         setDevices(res.data.devices || []);
       } catch (err) {
         console.error("Failed to fetch devices", err);

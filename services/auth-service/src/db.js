@@ -96,6 +96,12 @@ async function createTables() {
           created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    
+    // Ensure column exists if table was already created in a previous version
+    await pool.query(`
+      ALTER TABLE magic_links ADD COLUMN IF NOT EXISTS requested_role VARCHAR(64);
+    `);
+
     logger.info({ event: 'postgres_tables_checked' });
   } catch (err) {
     logger.warn({ event: 'postgres_tables_error', error: err.message });

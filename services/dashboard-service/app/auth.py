@@ -55,9 +55,8 @@ def _get_public_key() -> str:
     if _public_key_cache:
         return _public_key_cache
 
-    # In production, this URL should be loaded from settings
-    # E.g. settings.auth_service_url + "/public-key"
-    auth_url = "http://localhost:3002/auth/public-key"
+    # Fetch public key from auth-service for JWT verification
+    auth_url = f"{settings.auth_service_url}/auth/public-key"
     try:
         # Sync fetch for simplicity, or we can assume it was fetched in lifespan
         resp = httpx.get(auth_url, timeout=5)

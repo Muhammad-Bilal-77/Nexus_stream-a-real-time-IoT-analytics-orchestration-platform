@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Service
     dashboard_port: int = 8002
+    auth_service_url: str = "http://auth-service:3002"   # Internal URL for key fetching
 
     # JWT — must match auth-service (HS256 for current stub; RS256 in production)
     jwt_secret: str = "nexusstream-dev-jwt-secret-change-in-prod"

@@ -8,7 +8,6 @@ export const Sidebar: React.FC = () => {
   
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', access: ['viewer', 'analyst', 'admin'] },
-    { to: '/devices', icon: Server, label: 'Device Registry', access: ['viewer', 'analyst', 'admin'] },
     { to: '/admin', icon: Settings, label: 'Administration', access: ['admin'] },
   ];
 
