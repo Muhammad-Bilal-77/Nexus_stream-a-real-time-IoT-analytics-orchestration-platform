@@ -1,15 +1,15 @@
 # 🌌 NexusStream: Advanced IoT Analytics & Orchestration Platform
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Status: Under Development](https://img.shields.io/badge/Status-Under--Development-orange.svg)
-![Frontend: Building](https://img.shields.io/badge/Frontend-In--Progress-yellow.svg)
+![Status: Stable](https://img.shields.io/badge/Status-Stable--Production--Ready-brightgreen.svg)
+![Frontend: Completed](https://img.shields.io/badge/Frontend-Completed-brightgreen.svg)
 ![Backend: Node.js + Python](https://img.shields.io/badge/Backend-Node.js%20%7C%20Python-3776AB.svg?logo=python)
 ![Infrastructure: Docker](https://img.shields.io/badge/Infrastructure-Docker-2496ED.svg?logo=docker)
 
 **NexusStream** is a high-performance, industrial-grade IoT analytics platform. 
 
-> [!NOTE]
-> **Active Development**: The backend microservices architecture is fully implemented and operational. We are currently focusing on the high-fidelity **Frontend VisionTrack Dashboard** to provide world-class real-time visualizations.
+> [!IMPORTANT]
+> **Production Ready / Stable**: The NexusStream platform is fully operational, featuring a high-fidelity **VisionTrack Command Hub** and a robust microservices backend. The entire stack is orchestrated via Docker, providing a seamless "Zero-Configuration" environment for real-time IoT telemetry and high-security administrative control.
 
 ---
 
@@ -60,10 +60,10 @@ graph TD
 - **Icons**: Lucide React.
 
 ### **Backend Services**
-- **Ingestion Service**: Node.js v20 + Express + Socket.io. Validates packets using AJV (JSON Schema) before publishing to Redis.
-- **Analytics Service**: Python 3.11 + FastAPI. Implements moving-average filters, sliding-window statistics, and Z-score anomaly detection.
-- **Auth Service**: Node.js + Passport.js. Features Magic Link (passwordless) login, Google/GitHub OAuth, and RS256 asymmetric token signing.
-- **Dashboard Service**: Python + FastAPI. Serves historical data queries and manages device registry interactions.
+- **Ingestion Service**: Node.js v22 + Express + Socket.io. Validates incoming telemetry against rigid JSON Schemas (AJV) before broadcasting to the Redis Pub/Sub backbone.
+- **Analytics Service**: Python 3.12 + FastAPI. The platform's brain, calculating sliding-window drift, Z-score anomalies, and statistical snapshots in real-time.
+- **Auth Service**: Node.js + Passport.js. Implements a secure **Passwordless Magic Link** flow with RS256 asymmetric JWT signing.
+- **Dashboard Service**: Python 3.12 + FastAPI. The data orchestration layer, serving historical telemetry and administrative cache management.
 
 ### **Infrastructure & Data**
 - **Orchestration**: Docker Compose with health-aware dependency graphs.
@@ -76,10 +76,10 @@ graph TD
 
 ## ✨ Key Features & Logic
 
-### 1. **Stateless Authentication (RS256 JWT)**
-NexusStream prioritizes security with a decentralized identity model.
-- **The Approach**: The Auth Service issues JWTs signed with a Private RSA key. Other services (Analytics, Dashboard) verify these tokens using a Public Key. This eliminates recursive database lookups for auth validation on every API call.
-- **Methods**: Integrated Magic Link flow for passwordless entry and Multi-provider OAuth2.
+### 1. **Stateless Identity (RS256 JWT)**
+NexusStream eliminates database bottlenecks via a decentralized security model.
+- **The Approach**: The Auth Service signs identifiers using an **Asymmetric Private RSA Key**. External microservices (Analytics, Dashboard) verify these signatures using a **Public Key Beacon**, allowing for zero-delay authorization without hitting the central database.
+- **Admin Authority**: A specialized RBAC system allows for granular control over holographic widgets and administrative data views.
 
 ### 2. **Real-time Telemetry Pipeline**
 - **The Logic**: IoT packets flow from simulators into the `ingestion-service`. Each packet is validated against a strict JSON schema. Once validated, it is broadcasted over WebSockets for immediate visualization and published to Redis for downstream processing.
@@ -90,9 +90,10 @@ NexusStream prioritizes security with a decentralized identity model.
 - **The Approach**: The `analytics-service` maintains a sliding temporal window of telemetry. It identifies "Statistical Outliers" by comparing incoming values against the historic mean and standard deviation of that specific device.
 - **Database Hybridization**: Uses **PostgreSQL** for relational metadata and **InfluxDB** for high-frequency time-series data, ensuring the best tool is used for each task.
 
-### 4. **Premium Design Language**
-- **Aesthetic**: "Urban Ethereal" – using deep-space backdrops, glassmorphism cards, and liquid-smooth animations.
-- **UX**: Micro-interactions provide instant feedback, making the complex data feel intuitive and alive.
+### 4. **Holographic Command Hub**
+- **Aesthetic**: "Ethereal Urbanist" – using deep-space backdrops, liquid glassmorphism, and live holographic radar sweeps.
+- **Admin Authority Vault**: A specialized control center for administrators featuring Database Shard Matrixes, Security Core Scans, and Authorized Command Indicies.
+- **Micro-Animations**: Real-time "Scroll-Reveal" transitions and 60fps telemetry rendering via hardware-accelerated canvas.
 
 ---
 
@@ -109,8 +110,9 @@ nexusstream/
 ├── databases/                
 │   ├── postgres/             # User & Device relational schemas
 │   └── redis/                # Pub/Sub networking configuration
-├── docker-compose.yml        # Service orchestration & networking
-└── start_all.ps1             # Automated startup script
+├── docker-compose.yml        # Multi-service production orchestration
+├── .env.example              # Template for secure environment variables
+└── start_all.ps1             # Local development bootstrap script
 ```
 
 ---
@@ -123,12 +125,10 @@ If you are on Windows, you can start the entire stack (including Redis and the F
 ./start_all.ps1
 ```
 This script will spawn multiple windows for:
-- **Redis Server** (Local binary)
-- **Ingestion Service** (Node.js)
-- **Auth Service** (Node.js)
-- **Analytics Service** (Python)
-- **Dashboard Service** (Python)
-- **Frontend Dashboard** (Vite/React)
+- **Redis & Postgres** (Local/Docker Instances)
+- **Ingestion & Auth** (Node.js Environment)
+- **Analytics & Dashboard** (Python 3.12 Virtual Envs)
+- **VisionTrack UI** (Vite / React 19)
 
 ### Option 2: Docker Orchestration
 If you have Docker installed, use the orchestration file:
@@ -176,10 +176,11 @@ NexusStream was built to prove that **Modern Infrastructure deserves Modern Desi
 
 ## 🗺️ Roadmap
 NexusStream is evolving. Our current focus is on enhancing the user experience and deep-data insights:
-- [ ] **Advanced Frontend**: Finalizing the "VisionTrack" dashboard with 3D topology views.
-- [ ] **Predictive Maintenance**: Integrating ML models to predict device failure before it happens.
-- [ ] **Mobile App**: Developing a cross-platform mobile app for on-the-go monitoring.
-- [ ] **Global Scaling**: Testing high-availability clusters with Kubernetes (k8s).
+- [x] **Advanced Frontend**: Finalizing the "VisionTrack" dashboard with live holographic sweeps.
+- [x] **Secured Command**: Implementing the Admin Authority Vault and RBAC persistence.
+- [ ] **Predictive Maintenance**: Integrating ML models (LSTM/Prophet) to predict device failure.
+- [ ] **Mobile App**: Developing a Flutter-based mobile companion for field engineers.
+- [ ] **Global Scaling**: Multi-region Kubernetes (k8s) cluster deployment.
 
 ---
 
