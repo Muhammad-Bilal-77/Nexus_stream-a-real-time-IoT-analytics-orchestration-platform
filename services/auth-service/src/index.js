@@ -17,6 +17,8 @@
 
 'use strict';
 
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -52,13 +54,6 @@ app.get('/health', async (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-// ---------------------------------------------------------------------------
-// Core Auth Routes (RS256, DB-backed)
-// ---------------------------------------------------------------------------
-const authRoutes = require('./routes/auth');
-app.use('/auth', authRoutes);
-
 // ---------------------------------------------------------------------------
 // OAuth Routes
 // ---------------------------------------------------------------------------
@@ -89,6 +84,15 @@ app.get('/auth/github/callback', passport.authenticate('github', {
   const { access_token, refresh_token } = req.user;
   res.redirect(`http://localhost:5173/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`);
 });
+
+// ---------------------------------------------------------------------------
+// Core Auth Routes (RS256, DB-backed)
+// ---------------------------------------------------------------------------
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
+
+// ---------------------------------------------------------------------------
+// Start Server
 
 // ---------------------------------------------------------------------------
 // Start Server

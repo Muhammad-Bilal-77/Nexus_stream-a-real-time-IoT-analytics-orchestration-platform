@@ -69,7 +69,7 @@ async function verifyOAuth(provider, profile, email, done) {
         const uniqueUsername = `${baseUsername}_${Math.random().toString(36).substr(2, 5)}`;
         
         const insertRes = await client.query(
-          `INSERT INTO users (username, email, oauth_provider, oauth_id) VALUES ($1, $2, $3, $4) RETURNING id, username`,
+          `INSERT INTO users (username, email, oauth_provider, oauth_id, is_active) VALUES ($1, $2, $3, $4, true) RETURNING id, username, is_active`,
           [uniqueUsername, email, provider, profile.id]
         );
         user = insertRes.rows[0];

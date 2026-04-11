@@ -36,12 +36,15 @@ async function query(text, params) {
       return { rowCount: 0 };
     }
     if (text.includes('INSERT INTO users')) {
-      return { rows: [{ id: 'mock-uuid', username: params[0] }] };
+      return { rows: [{ id: 'mock-uuid', username: params[0], is_active: true }] };
     }
     if (text.includes('SELECT r.name FROM roles')) {
       return { rows: [{ name: 'admin' }] };
     }
-    if (text.includes('SELECT id, username, password_hash, is_active FROM users')) {
+    if (text.includes('UPDATE users SET oauth_provider')) {
+      return { rowCount: 1 };
+    }
+    if (text.includes('SELECT id, username') && text.includes('is_active FROM users')) {
       const isViewer = params[0] === 'viewer';
       const isAnalyst = params[0] === 'analyst';
       return { 

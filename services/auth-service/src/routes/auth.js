@@ -13,6 +13,7 @@ const keys = require('../keys');
 const config = require('../../config/default');
 const logger = require('../logger');
 const { sendMagicLinkEmail } = require('../mailer');
+const redis = require('../redis');
 
 // Common token generation function
 function generateTokens(user, roles) {
@@ -79,7 +80,7 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
       const uniqueUsername = `${baseUsername}_${crypto.randomBytes(3).toString('hex')}`;
       
       const insertRes = await client.query(
-        `INSERT INTO users (username, email, is_active) VALUES ($1, $2, true) RETURNING id, username`,
+        `INSERT INTO users (username, email, is_active) VALUES ($1, $2, true) RETURNING id, username, is_active`,
         [uniqueUsername, email]
       );
       user = insertRes.rows[0];
@@ -377,10 +378,40 @@ router.post('/refresh', async (req, res) => {
 });
 
 /**
+ * POST /auth/logout
+ * Revokes the current token by adding it to the Redis blacklist.
+ */
+router.post('/logout', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(400).json({ error: 'Missing token' });
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const decoded = jwt.verify(token, keys.getPublicKey(), { algorithms: ['RS256'] });
+    
+    // Calculate remaining TTL
+    const now = Math.floor(Date.now() / 1000);
+    const ttl = decoded.exp - now;
+    
+    if (ttl > 0) {
+      await redis.blacklistToken(token, ttl);
+    }
+    
+    logger.info({ event: 'logout_success', username: decoded.sub });
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    // If token is already invalid, logout is effectively successful
+    res.json({ message: 'Logged out successfully' });
+  }
+});
+
+/**
  * GET /auth/verify 
  * Standalone verification utility (useful for APIs wanting to explicitly delegate check).
  */
-router.get('/verify', (req, res) => {
+router.get('/verify', async (req, res) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'missing_token' });
@@ -388,6 +419,12 @@ router.get('/verify', (req, res) => {
 
   const token = authHeader.slice(7);
   try {
+    // Check Blacklist
+    const blacklisted = await redis.isBlacklisted(token);
+    if (blacklisted) {
+      return res.status(401).json({ valid: false, error: 'Token has been revoked' });
+    }
+
     const decoded = jwt.verify(token, keys.getPublicKey(), { algorithms: ['RS256'] });
     res.json({ valid: true, payload: decoded });
   } catch (err) {

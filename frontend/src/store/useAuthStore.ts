@@ -54,12 +54,28 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => set({
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-        isAuthenticated: false,
-      }),
+      logout: async () => {
+        const { accessToken } = useAuthStore.getState();
+        if (accessToken) {
+          try {
+            await fetch('http://localhost:3002/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              }
+            });
+          } catch (error) {
+            console.warn("Backend logout failed, clearing local state anyway", error);
+          }
+        }
+        
+        set({
+          accessToken: null,
+          refreshToken: null,
+          user: null,
+          isAuthenticated: false,
+        });
+      },
 
       setAccessToken: (access: string) => set({ accessToken: access }),
     }),

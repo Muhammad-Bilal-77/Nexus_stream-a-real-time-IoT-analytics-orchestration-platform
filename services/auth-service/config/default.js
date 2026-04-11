@@ -16,5 +16,10 @@ module.exports = {
     user:     process.env.POSTGRES_USER     || 'nexus_admin',
     password: process.env.POSTGRES_PASSWORD || 'changeme',
   },
+  redis: {
+    host:     process.env.REDIS_HOST     || 'localhost',
+    port:     parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || 'Str0ng_Redis_Pass!',
+  },
   logLevel: process.env.LOG_LEVEL || 'info',
 };
